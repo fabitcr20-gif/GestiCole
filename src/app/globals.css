@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+/*
+  GestiCole usa un tema único, claro y de alto contraste (sin modo oscuro
+  automático) para que la apariencia sea siempre predecible: es una
+  decisión de accesibilidad pensada para personas con poca familiaridad
+  con la tecnología, donde la consistencia visual importa más que
+  adaptarse a las preferencias del sistema.
+*/
+:root {
+  --background: #f4f6f9;
+  --surface: #ffffff;
+  --foreground: #0f172a;
+  --muted: #47546399;
+  --muted-foreground: #475569;
+  --border: #cbd5e1;
+
+  --color-primary: #1d4ed8;
+  --color-primary-hover: #1e3fae;
+  --color-primary-foreground: #ffffff;
+
+  --color-success: #15803d;
+  --color-success-bg: #dcfce7;
+  --color-success-border: #86efac;
+
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fee2e2;
+  --color-danger-border: #fca5a5;
+
+  --color-warning: #b45309;
+  --color-warning-bg: #fef3c7;
+  --color-warning-border: #fcd34d;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-foreground: var(--color-primary-foreground);
+
+  --color-success: var(--color-success);
+  --color-success-bg: var(--color-success-bg);
+  --color-success-border: var(--color-success-border);
+
+  --color-danger: var(--color-danger);
+  --color-danger-bg: var(--color-danger-bg);
+  --color-danger-border: var(--color-danger-border);
+
+  --color-warning: var(--color-warning);
+  --color-warning-bg: var(--color-warning-bg);
+  --color-warning-border: var(--color-warning-border);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  font-size: 18px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Foco visible y grueso para navegación por teclado */
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+* {
+  scrollbar-width: thin;
+}
+
+@media print {
+  aside,
+  nav,
+  header {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+}

@@ -90,6 +90,60 @@ export async function sendGmail(
   });
 }
 
+export type GoogleDocSection = { heading: string; body: string };
+
+/** Crea un Google Doc con encabezados en negrita a partir de secciones de texto, y lo mueve a la carpeta de respaldo. */
+export async function createGoogleDoc(
+  authClient: InstanceType<typeof google.auth.OAuth2>,
+  title: string,
+  sections: GoogleDocSection[],
+  folderId?: string | null
+) {
+  const docs = google.docs({ version: "v1", auth: authClient });
+
+  const created = await docs.documents.create({ requestBody: { title } });
+  const documentId = created.data.documentId;
+  if (!documentId) throw new Error("No se pudo crear el documento de Google Docs");
+
+  let index = 1;
+  let fullText = "";
+  const headingRanges: { start: number; end: number }[] = [];
+
+  for (const section of sections) {
+    const headingText = `${section.heading}\n`;
+    headingRanges.push({ start: index, end: index + section.heading.length });
+    fullText += headingText;
+    index += headingText.length;
+
+    const bodyText = `${section.body}\n\n`;
+    fullText += bodyText;
+    index += bodyText.length;
+  }
+
+  await docs.documents.batchUpdate({
+    documentId,
+    requestBody: {
+      requests: [
+        { insertText: { location: { index: 1 }, text: fullText } },
+        ...headingRanges.map((r) => ({
+          updateTextStyle: {
+            range: { startIndex: r.start, endIndex: r.end },
+            textStyle: { bold: true, fontSize: { magnitude: 13, unit: "PT" } },
+            fields: "bold,fontSize",
+          },
+        })),
+      ],
+    },
+  });
+
+  if (folderId) {
+    const drive = google.drive({ version: "v3", auth: authClient });
+    await drive.files.update({ fileId: documentId, addParents: folderId, fields: "id, parents" });
+  }
+
+  return { documentId, url: `https://docs.google.com/document/d/${documentId}/edit` };
+}
+
 export async function listClassroomCourses(
   authClient: InstanceType<typeof google.auth.OAuth2>
 ) {

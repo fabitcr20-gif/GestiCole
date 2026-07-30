@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import { getGoogleAuthClient, getOrCreateBackupFolder, uploadFileToDrive } from "@/lib/google";
+import { formatLessonPlanAsText } from "@/lib/mep/format-plan";
 
 const bodySchema = z.object({
   type: z.enum(["lessonPlan", "exam"]),
@@ -29,23 +30,13 @@ export async function POST(req: NextRequest) {
   let content: string;
 
   if (type === "lessonPlan") {
-    const plan = await prisma.lessonPlan.findFirst({ where: { id, teacherId: teacher.id } });
+    const plan = await prisma.lessonPlan.findFirst({
+      where: { id, teacherId: teacher.id },
+      include: { section: true },
+    });
     if (!plan) return NextResponse.json({ error: "Planeamiento no encontrado" }, { status: 404 });
     fileName = `Planeamiento - ${plan.title}.txt`;
-    content = [
-      plan.title,
-      plan.unit ? `Unidad: ${plan.unit}` : "",
-      "",
-      "Objetivos:",
-      plan.objectives,
-      "",
-      "Estrategias de mediación:",
-      plan.strategies,
-      "",
-      "Criterios de evaluación:",
-      plan.evaluationCriteria,
-      plan.resources ? `\nRecursos:\n${plan.resources}` : "",
-    ].join("\n");
+    content = formatLessonPlanAsText(plan, teacher.name);
 
     const folderId = await getOrCreateBackupFolder(authClient, teacher.driveFolderId);
     const file = await uploadFileToDrive(authClient, folderId, fileName, "text/plain", content);

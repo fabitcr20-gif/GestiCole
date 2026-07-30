@@ -1,8 +1,8 @@
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
-import { LessonPlanForm } from "@/components/lesson-plan-form";
-import { createLessonPlan } from "@/lib/actions/lesson-plans";
+import { MepPlanWizard } from "@/components/mep-plan-wizard";
+import { isClaudeConfigured } from "@/lib/mep/generate-plan";
 
 export default async function NewLessonPlanPage() {
   const teacher = await getCurrentTeacher();
@@ -17,10 +17,10 @@ export default async function NewLessonPlanPage() {
   return (
     <div>
       <PageHeader
-        title="Nuevo planeamiento"
-        description="Complete los campos básicos de su planeamiento didáctico."
+        title="Nuevo planeamiento didáctico con IA"
+        description="Complete el contexto de su clase y genere un planeamiento alineado a la Plantilla Oficial Anexo A del MEP."
       />
-      <LessonPlanForm action={createLessonPlan} sections={sections} />
+      <MepPlanWizard sections={sections} claudeConfigured={isClaudeConfigured} />
     </div>
   );
 }

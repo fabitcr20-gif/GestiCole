@@ -9,6 +9,7 @@ const GOOGLE_SCOPES = [
   "email",
   "profile",
   "https://www.googleapis.com/auth/drive.file", // Crear/leer archivos que la app respalda en Drive
+  "https://www.googleapis.com/auth/documents", // Exportar planeamientos como Google Docs
   "https://www.googleapis.com/auth/gmail.send", // Enviar reportes por Gmail
   "https://www.googleapis.com/auth/classroom.courses.readonly", // Leer cursos de Classroom
   "https://www.googleapis.com/auth/classroom.rosters.readonly", // Leer listas de estudiantes

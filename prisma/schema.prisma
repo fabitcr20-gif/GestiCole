@@ -117,7 +117,7 @@ model Grade {
   @@map("grades")
 }
 
-/// Planeamiento didáctico
+/// Planeamiento didáctico (alineado a la Plantilla Oficial Anexo A - DDC/MEP)
 model LessonPlan {
   id        String   @id @default(cuid())
   teacherId String
@@ -125,23 +125,67 @@ model LessonPlan {
   sectionId String?
   section   Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
 
-  title              String
-  unit               String? // Unidad temática
-  startDate          DateTime?
-  endDate            DateTime?
-  objectives         String // Objetivos de aprendizaje
-  strategies         String // Estrategias de mediación pedagógica
-  evaluationCriteria String // Criterios/indicadores de evaluación
-  resources          String? // Recursos y materiales
-  notes              String?
+  title     String
+  unit      String? // Unidad temática
+  startDate DateTime?
+  endDate   DateTime?
 
-  driveFileId String? // Id del archivo respaldado en Google Drive
+  // --- Parte administrativa (Anexo A) ---
+  direccionRegional String? // Dirección Regional de Educación
+  centroEducativo   String?
+  asignatura        String? // Asignatura / módulo / especialidad
+  nivelCiclo        String? // Preescolar, I Ciclo, II Ciclo, III Ciclo, Diversificada, ETP, EPJA
+  periodicidad      String? // Mensual, Trimestral, etc.
+  cursoLectivo      Int?    @default(2026)
+  competencias      String? // Competencia(s) general(es) del periodo
+
+  // --- Contextualización institucional y social ---
+  institutionalContext String? // Infraestructura, conectividad, recursos tecnológicos
+  socialContext        String? // Características socioeconómicas/culturales de la comunidad
+
+  // --- Contextualización de aula y diversidad ---
+  groupCharacteristics String? // Matrícula, género, clima de aula
+  learningStyles       String? // Estilos y ritmos de aprendizaje del grupo
+  duaSupports          Json?   @default("[]") // Pautas DUA seleccionadas (Representación/Acción/Implicación)
+  specialEducationNeeds String? // Adecuaciones curriculares (acceso, no significativas, significativas)
+
+  // --- Enfoque pedagógico y contenido (editable, generado o manual) ---
+  pedagogicalApproach String? // Clave del modelo pedagógico aplicado según asignatura/nivel
+  objectives          String // Aprendizajes esperados / objetivos
+  strategies          String // Estrategias de mediación pedagógica
+  evaluationCriteria  String // Criterios/indicadores de evaluación
+  resources           String? // Recursos y materiales
+  reflection          String? // Reflexión docente
+  notes               String?
+  aiGenerated         Boolean @default(false)
+
+  driveFileId  String? // Id del archivo respaldado en Google Drive
+  googleDocId  String? // Id del documento exportado a Google Docs
+
+  documents LessonPlanDocument[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([teacherId])
   @@map("lesson_plans")
+}
+
+/// Documento de referencia adjunto a un planeamiento (programa de estudio, guía, material)
+model LessonPlanDocument {
+  id           String     @id @default(cuid())
+  lessonPlanId String
+  lessonPlan   LessonPlan @relation(fields: [lessonPlanId], references: [id], onDelete: Cascade)
+
+  type          String // "programa" | "guia" | "material"
+  fileName      String
+  extractedText String? // Texto extraído del PDF/documento para contexto de la IA
+  driveFileId   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([lessonPlanId])
+  @@map("lesson_plan_documents")
 }
 
 /// Prueba / examen generado con plantilla

@@ -1,4 +1,4 @@
-import { PDFParse } from "pdf-parse";
+import { getDocumentProxy, extractText } from "unpdf";
 
 const MAX_EXTRACTED_CHARS = 40000;
 
@@ -7,13 +7,9 @@ export async function extractTextFromFile(buffer: Buffer, mimeType: string): Pro
   let text: string;
 
   if (mimeType === "application/pdf") {
-    const parser = new PDFParse({ data: buffer });
-    try {
-      const result = await parser.getText();
-      text = result.text;
-    } finally {
-      await parser.destroy();
-    }
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const result = await extractText(pdf, { mergePages: true });
+    text = result.text;
   } else {
     text = buffer.toString("utf-8");
   }

@@ -1,0 +1,169 @@
+// Esquema de base de datos de GestiCole
+// Diseñado para PostgreSQL (compatible con Google Cloud SQL para PostgreSQL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Docente dueño de los datos (login con Google)
+model Teacher {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  googleId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Preferencias de integración con Google
+  driveFolderId    String? // Carpeta de respaldo en Google Drive
+  classroomCourses String? // Último curso de Classroom sincronizado (JSON simple)
+
+  sections    Section[]
+  lessonPlans LessonPlan[]
+  exams       Exam[]
+
+  @@map("teachers")
+}
+
+/// Sección / grupo de estudiantes (p. ej. "7-2 Matemática")
+model Section {
+  id        String  @id @default(cuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  name    String // Nombre de la sección, p. ej. "7-2"
+  subject String // Materia, p. ej. "Matemática"
+  level   String? // Nivel/grado opcional
+  year    Int     @default(2026)
+  color   String  @default("#2563eb") // Color identificador en la UI
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  students        Student[]
+  gradeComponents GradeComponent[]
+  grades          Grade[]
+  lessonPlans     LessonPlan[]
+  exams           Exam[]
+
+  @@index([teacherId])
+  @@map("sections")
+}
+
+/// Estudiante matriculado en una sección
+model Student {
+  id        String  @id @default(cuid())
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  fullName    String
+  studentCode String? // Cédula, carné o identificador del MEP/SEA
+  email       String?
+  active      Boolean @default(true)
+  order       Int     @default(0) // Orden en la lista/planilla
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  grades Grade[]
+
+  @@index([sectionId])
+  @@map("students")
+}
+
+/// Rubro de evaluación con su porcentaje (p. ej. Cotidiano 20%, Pruebas 40%)
+model GradeComponent {
+  id        String  @id @default(cuid())
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  name   String // p. ej. "Cotidiano", "Tareas", "Pruebas", "Proyecto", "Asistencia"
+  weight Float // Porcentaje asignado (0-100)
+  period String @default("I") // Periodo/trimestre al que pertenece
+  order  Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  grades Grade[]
+
+  @@index([sectionId, period])
+  @@map("grade_components")
+}
+
+/// Nota individual de un estudiante en un rubro específico
+model Grade {
+  id          String         @id @default(cuid())
+  studentId   String
+  student     Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  componentId String
+  component   GradeComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  sectionId   String
+  section     Section        @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  score Float? // Nota de 0 a 100, null = sin calificar
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, componentId])
+  @@index([sectionId])
+  @@map("grades")
+}
+
+/// Planeamiento didáctico
+model LessonPlan {
+  id        String   @id @default(cuid())
+  teacherId String
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  sectionId String?
+  section   Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  title              String
+  unit               String? // Unidad temática
+  startDate          DateTime?
+  endDate            DateTime?
+  objectives         String // Objetivos de aprendizaje
+  strategies         String // Estrategias de mediación pedagógica
+  evaluationCriteria String // Criterios/indicadores de evaluación
+  resources          String? // Recursos y materiales
+  notes              String?
+
+  driveFileId String? // Id del archivo respaldado en Google Drive
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId])
+  @@map("lesson_plans")
+}
+
+/// Prueba / examen generado con plantilla
+model Exam {
+  id        String   @id @default(cuid())
+  teacherId String
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  sectionId String?
+  section   Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  title        String
+  subject      String?
+  instructions String?
+  totalPoints  Float  @default(100)
+  // Preguntas almacenadas como JSON: [{ type, prompt, points, options? }]
+  questions    Json   @default("[]")
+
+  driveFileId String? // Id del archivo respaldado en Google Drive
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId])
+  @@map("exams")
+}

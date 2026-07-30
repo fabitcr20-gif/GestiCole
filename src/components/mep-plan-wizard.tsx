@@ -32,10 +32,12 @@ type ReferenceDocument = {
   error?: string;
 };
 
+const MAX_UPLOAD_SIZE = 4 * 1024 * 1024;
+
 const DOCUMENT_SLOTS: { slot: ReferenceDocument["slot"]; label: string; hint: string }[] = [
-  { slot: "programa", label: "Programa de estudio oficial", hint: "PDF o texto del programa vigente del MEP." },
-  { slot: "guia", label: "Guía de competencias MEP 2026", hint: "PDF o texto de la guía de competencias." },
-  { slot: "material", label: "Material didáctico de apoyo", hint: "Cualquier otro material de referencia (opcional)." },
+  { slot: "programa", label: "Programa de estudio oficial", hint: "PDF o texto del programa vigente del MEP (máximo 4 MB)." },
+  { slot: "guia", label: "Guía de competencias MEP 2026", hint: "PDF o texto de la guía de competencias (máximo 4 MB)." },
+  { slot: "material", label: "Material didáctico de apoyo", hint: "Cualquier otro material de referencia, opcional (máximo 4 MB)." },
 ];
 
 const STEPS = [
@@ -137,16 +139,40 @@ export function MepPlanWizard({
   async function handleFileChange(slot: ReferenceDocument["slot"], file: File | null) {
     if (!file) return;
     setDocuments((d) => ({ ...d, [slot]: { slot, fileName: file.name, extractedText: null, status: "loading" } }));
+
+    if (file.size > MAX_UPLOAD_SIZE) {
+      setDocuments((d) => ({
+        ...d,
+        [slot]: {
+          slot,
+          fileName: file.name,
+          extractedText: null,
+          status: "error",
+          error: "El archivo es demasiado grande (máximo 4 MB). Intente con un archivo más pequeño.",
+        },
+      }));
+      return;
+    }
+
     try {
       const body = new FormData();
       body.append("file", file);
       body.append("type", slot);
       const res = await fetch("/api/lesson-plans/extract-text", { method: "POST", body });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "No se pudo leer el documento");
+      let data: { error?: string; extractedText?: string } | null = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+      if (!res.ok) {
+        throw new Error(
+          data?.error ?? (res.status === 413 ? "El archivo es demasiado grande (máximo 4 MB)." : "No se pudo leer el documento")
+        );
+      }
       setDocuments((d) => ({
         ...d,
-        [slot]: { slot, fileName: file.name, extractedText: data.extractedText, status: "done" },
+        [slot]: { slot, fileName: file.name, extractedText: data?.extractedText ?? null, status: "done" },
       }));
     } catch (err) {
       setDocuments((d) => ({

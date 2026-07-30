@@ -140,6 +140,47 @@ sudo -u postgres psql -c "CREATE DATABASE gesticole;"
    npx prisma migrate deploy
    ```
 
+## Desplegar en Vercel
+
+GestiCole (Next.js) se despliega en Vercel sin configuración especial, pero hay un
+punto importante de arquitectura: las funciones de Vercel son **serverless** (cada
+solicitud puede correr en una instancia nueva y de corta duración), así que no pueden
+mantener corriendo un proceso como el **Cloud SQL Auth Proxy**. Elija una de estas dos
+opciones para la base de datos en producción:
+
+- **Opción recomendada — Postgres serverless** (Vercel Postgres/Neon, Supabase, etc.):
+  funciona de inmediato con conexiones cortas y pooling integrado. Cree la base desde
+  la pestaña **Storage** de su proyecto en Vercel (o cree una cuenta en Neon/Supabase),
+  copie el `DATABASE_URL` con pooling que le den, y péguelo como variable de entorno en
+  Vercel.
+- **Google Cloud SQL directo**: habilite una **IP pública** en la instancia, fuerce SSL,
+  y autorice el rango `0.0.0.0/0` en "Redes autorizadas" (las funciones de Vercel no
+  tienen una IP fija salvo que pague el add-on de IP fija). Use
+  `DATABASE_URL="postgresql://usuario:contrasena@IP_PUBLICA:5432/gesticole?sslmode=require&connection_limit=5"`.
+  El límite bajo de conexiones (`connection_limit`) evita agotar las conexiones de
+  Cloud SQL cuando hay varias funciones ejecutándose a la vez.
+
+### Pasos
+
+1. En [vercel.com](https://vercel.com), **Add New → Project** e importe el repositorio
+   de GitHub `fabitcr20-gif/GestiCole` (rama a desplegar: `main` después de fusionar el
+   Pull Request, o la rama de la feature para una vista previa).
+2. Vercel detecta Next.js automáticamente; no hace falta cambiar el comando de build.
+3. Agregue las variables de entorno del proyecto (**Settings → Environment
+   Variables**), las mismas de `.env.example`:
+   - `DATABASE_URL`
+   - `NEXTAUTH_URL` → la URL pública que le dé Vercel (o su dominio propio)
+   - `NEXTAUTH_SECRET` → genere uno con `openssl rand -base64 32`
+   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (opcional; recuerde agregar la URL de
+     Vercel a los orígenes/redirecciones autorizados en Google Cloud Console)
+4. Antes del primer despliegue (o tras cada cambio de esquema), ejecute las migraciones
+   contra la base de datos de producción desde su máquina:
+   ```bash
+   DATABASE_URL="<su-database-url-de-produccion>" npx prisma migrate deploy
+   ```
+5. Despliegue. El script `postinstall` del proyecto ejecuta `prisma generate`
+   automáticamente en cada build de Vercel.
+
 ## Funcionalidades principales
 
 - **Secciones y estudiantes**: cree grupos, agregue estudiantes manualmente o

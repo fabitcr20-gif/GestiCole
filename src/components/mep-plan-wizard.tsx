@@ -23,6 +23,7 @@ import {
   guessFrameworkKey,
 } from "@/lib/mep/pedagogical-frameworks";
 import { createMepLessonPlan, type MepPlanFormInput } from "@/lib/actions/lesson-plans";
+import { extractTextFromFileClient } from "@/lib/mep/extract-text-client";
 
 type ReferenceDocument = {
   slot: "programa" | "guia" | "material";
@@ -32,12 +33,12 @@ type ReferenceDocument = {
   error?: string;
 };
 
-const MAX_UPLOAD_SIZE = 4 * 1024 * 1024;
+const MAX_UPLOAD_SIZE = 20 * 1024 * 1024;
 
 const DOCUMENT_SLOTS: { slot: ReferenceDocument["slot"]; label: string; hint: string }[] = [
-  { slot: "programa", label: "Programa de estudio oficial", hint: "PDF o texto del programa vigente del MEP (máximo 4 MB)." },
-  { slot: "guia", label: "Guía de competencias MEP 2026", hint: "PDF o texto de la guía de competencias (máximo 4 MB)." },
-  { slot: "material", label: "Material didáctico de apoyo", hint: "Cualquier otro material de referencia, opcional (máximo 4 MB)." },
+  { slot: "programa", label: "Programa de estudio oficial", hint: "PDF o texto del programa vigente del MEP (máximo 20 MB)." },
+  { slot: "guia", label: "Guía de competencias MEP 2026", hint: "PDF o texto de la guía de competencias (máximo 20 MB)." },
+  { slot: "material", label: "Material didáctico de apoyo", hint: "Cualquier otro material de referencia, opcional (máximo 20 MB)." },
 ];
 
 const STEPS = [
@@ -148,31 +149,17 @@ export function MepPlanWizard({
           fileName: file.name,
           extractedText: null,
           status: "error",
-          error: "El archivo es demasiado grande (máximo 4 MB). Intente con un archivo más pequeño.",
+          error: "El archivo es demasiado grande (máximo 20 MB). Intente con un archivo más pequeño.",
         },
       }));
       return;
     }
 
     try {
-      const body = new FormData();
-      body.append("file", file);
-      body.append("type", slot);
-      const res = await fetch("/api/lesson-plans/extract-text", { method: "POST", body });
-      let data: { error?: string; extractedText?: string } | null = null;
-      try {
-        data = await res.json();
-      } catch {
-        data = null;
-      }
-      if (!res.ok) {
-        throw new Error(
-          data?.error ?? (res.status === 413 ? "El archivo es demasiado grande (máximo 4 MB)." : "No se pudo leer el documento")
-        );
-      }
+      const extractedText = await extractTextFromFileClient(file);
       setDocuments((d) => ({
         ...d,
-        [slot]: { slot, fileName: file.name, extractedText: data?.extractedText ?? null, status: "done" },
+        [slot]: { slot, fileName: file.name, extractedText, status: "done" },
       }));
     } catch (err) {
       setDocuments((d) => ({

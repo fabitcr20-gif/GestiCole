@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentTeacher } from "@/lib/current-teacher";
 import { extractTextFromFile } from "@/lib/mep/extract-text";
 
-const MAX_SIZE = 15 * 1024 * 1024;
+// Vercel rechaza cuerpos de solicitud mayores a ~4.5 MB antes de que este código
+// se ejecute, así que este límite se mantiene por debajo de ese tope de la plataforma.
+const MAX_SIZE = 4 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   const teacher = await getCurrentTeacher();
@@ -18,7 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Archivo inválido" }, { status: 400 });
   }
   if (file.size > MAX_SIZE) {
-    return NextResponse.json({ error: "El archivo es demasiado grande (máximo 15 MB)." }, { status: 400 });
+    return NextResponse.json({ error: "El archivo es demasiado grande (máximo 4 MB)." }, { status: 400 });
   }
 
   try {
